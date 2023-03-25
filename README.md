@@ -1,23 +1,35 @@
 # OpenAI API Proxy
 
-OpenAI API Proxy is a transparent middleware service built using Python and FastAPI, designed to sit between clients and the OpenAI API. The proxy supports all models and APIs of OpenAI, streams OpenAI's responses back to clients in real-time, and logs request timestamps, response times, status codes, request contents, response contents (if successful), and institution IDs to a database for future querying and maintenance.
+OpenAI API Proxy is a transparent middleware service built using Python and FastAPI, designed to sit between clients and
+the OpenAI API. The proxy supports all models and APIs of OpenAI, streams OpenAI's responses back to clients in
+real-time, and logs request timestamps, response times, status codes, request contents, response contents (if
+successful), and institution IDs to a database for future querying and maintenance.
 
 ## Features
 
-1. **Transparent Proxy**: Supports all OpenAI models and APIs. Request paths, models, and OPENAI_API_KEY are all obtained from the original requests.
+1. **Transparent Proxy**: Supports all OpenAI models and APIs. Request paths, models, and OPENAI_API_KEY are all
+   obtained from the original requests.
 2. **Streaming**: Streams OpenAI's responses back to clients in real-time.
-3. **Logging**: Records request timestamps, response times, status codes, request contents, response contents (if successful), and institution IDs to a database.
-4. **Institution ID**: Retrieves the institution ID from the query string and removes it from the query string when forwarding requests to OpenAI.
+3. **Logging**: Records request timestamps, response times, status codes, request contents, response contents (if
+   successful), and institution IDs to a database.
+4. **Institution ID**: Retrieves the institution ID from the query string and removes it from the query string when
+   forwarding requests to OpenAI.
 5. **Error Handling**: Handles request failures.
 
 ## Possible Use Cases
 
-1. **Enterprises and Institutions**: Establish a secure middleware layer between clients and the OpenAI API for internal monitoring and management of API usage.
-2. **Data Analysis**: Collect and analyze log data to understand hotspots and trends in API requests, optimizing API usage and performance.
-3. **Billing and Quota Management**: Track API requests per institution to implement usage-based billing and quota management.
-4. **Auditing and Security**: Ensure API requests comply with enterprise and institutional security policies and assist in auditing and tracking.
-5. **Performance Monitoring**: Monitor API response times and status codes in real-time to identify and resolve potential performance issues.
-6. **API Version Control and Migration**: Facilitate smooth API version migration by handling version discrepancies at the proxy layer, reducing client migration costs.
+1. **Enterprises and Institutions**: Establish a secure middleware layer between clients and the OpenAI API for internal
+   monitoring and management of API usage.
+2. **Data Analysis**: Collect and analyze log data to understand hotspots and trends in API requests, optimizing API
+   usage and performance.
+3. **Billing and Quota Management**: Track API requests per institution to implement usage-based billing and quota
+   management.
+4. **Auditing and Security**: Ensure API requests comply with enterprise and institutional security policies and assist
+   in auditing and tracking.
+5. **Performance Monitoring**: Monitor API response times and status codes in real-time to identify and resolve
+   potential performance issues.
+6. **API Version Control and Migration**: Facilitate smooth API version migration by handling version discrepancies at
+   the proxy layer, reducing client migration costs.
 
 ## Usage
 
@@ -44,9 +56,10 @@ curl -X POST "http://localhost:8000/v1/completions" \
 
 Replace `<your_openai_api_key>` with your actual OpenAI API key.
 
-In summary, OpenAI API Proxy is a flexible and powerful tool designed to help enterprises and institutions better manage and monitor their access to the OpenAI API, improving security, control, and performance.
-
+In summary, OpenAI API Proxy is a flexible and powerful tool designed to help enterprises and institutions better manage
+and monitor their access to the OpenAI API, improving security, control, and performance.
 
 ## Possible Improvements
+
 1. this project should be a general purpose API Proxy, not only for OpenAI API, use subpath to route to different API
 2. add more logging, like request headers, response headers, etc.
