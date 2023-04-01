@@ -14,11 +14,17 @@ from starlette.types import Send, Scope, Receive
 import anyio
 from datetime import datetime
 import json
+from utils import PathMatchingTree
 
 # database config
 DATABASE_URL = 'sqlite:///./openai_log.db'
 database = databases.Database(DATABASE_URL)
 Base = declarative_base()
+
+proxied_hosts = PathMatchingTree({
+    "/": "https://api.openai.com",
+    "/backend-api/conversation": "https://chat.openai.com",
+})
 
 
 # database model
@@ -66,11 +72,9 @@ async def save_log(log: OpenAILog):
 @app.middleware('http')
 async def proxy_openai_api(request: Request, call_next):
     # proxy request to OpenAI API
-    headers = {
-        'Accept': request.headers.get('Accept'),
-        'Authorization': request.headers.get('Authorization')
-    }
-    url = f'https://api.openai.com{request.url.path}'
+    headers = {k: v for k, v in request.headers.items() if
+               k not in ['host', 'content-length', 'x-forwarded-for', 'x-real-ip', 'connection']}
+    url = f'{proxied_hosts.get_matching(request.url.path)}{request.url.path}'
 
     start_time = datetime.now().microsecond
     # create httpx async client
