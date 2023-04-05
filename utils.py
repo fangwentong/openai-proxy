@@ -1,4 +1,21 @@
 class PathMatchingTree:
+    """
+    PathMatchingTree is a data structure that can be used to match a path with a value.
+    It supports exact match, partial match, and wildcard match.
+    For example, if the tree is built with the following config:
+      {
+          "/foo/bar": "value1",
+          "/baz/qux": "value2",
+          "/foo/*": "value3",
+          "/foo/*/bar": "value4"
+      }
+    Then the following path will match the corresponding value:
+      /foo/bar -> value1
+      /baz/qux -> value2
+      /foo/baz -> value3
+      /foo/baz/bar -> value4
+      /foo/baz/bar2 -> value3
+    """
     child = dict
     value = None
 
@@ -34,12 +51,3 @@ class PathMatchingTree:
             else:
                 break
         return matched.value
-
-
-if __name__ == "__main__":
-    proxied_hosts = PathMatchingTree({
-        "/": "https://api.openai.com",
-        "/backend-api/conversation": "https://chat.openai.com",
-    })
-    print(proxied_hosts.get_matching("/v1/completions"))
-    print(proxied_hosts.get_matching("/backend-api/conversation"))

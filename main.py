@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import time
 from functools import partial
 
@@ -8,7 +9,7 @@ from sqlalchemy import create_engine, Column, Integer, String, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import databases
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 from starlette.types import Send, Scope, Receive
 import anyio
@@ -29,6 +30,9 @@ proxied_hosts = PathMatchingTree({
 
 # database model
 class OpenAILog(Base):
+    """
+    OpenAI API call log
+    """
     __tablename__ = 'openai_logs'
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -118,7 +122,8 @@ async def proxy_openai_api(request: Request, call_next):
     response = OverrideStreamResponse(stream_api_response(), background=BackgroundTask(update_log))
     return response
 
-    @app.route('/{path:path}', methods={'GET', 'POST', 'DELETE'})
+    # noinspection PyUnreachableCode
+    @app.route('/{path:path}', methods=['GET', 'POST', 'DELETE'])
     async def get_proxy(request: Request, path: str):
         return await call_next(request)
 
@@ -156,10 +161,16 @@ class OverrideStreamResponse(StreamingResponse):
         async with anyio.create_task_group() as task_group:
             async def wrap(func: typing.Callable[[], typing.Coroutine]) -> None:
                 await func()
-                task_group.cancel_scope.cancel()
+                await task_group.cancel_scope.cancel()
 
             task_group.start_soon(wrap, partial(self.stream_response, send))
             await wrap(partial(self.listen_for_disconnect, receive))
 
         if self.background is not None:
             await self.background()
+
+
+if __name__ == '__main__':
+    import uvicorn
+
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, log_level="info", reload=True)
