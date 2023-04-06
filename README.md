@@ -2,8 +2,10 @@
 
 OpenAI API Proxy is a transparent middleware service built using Python and FastAPI, designed to sit between clients and
 the OpenAI API. The proxy supports all models and APIs of OpenAI, streams OpenAI's responses back to clients in
-real-time, and logs request timestamps, response times, status codes, request contents, response contents (if
-successful), and institution IDs to a database for future querying and maintenance.
+real-time, and logs request timestamps, response times, status codes, request contents and response contents to a
+database for future querying and maintenance.
+
+Note that this program was originally implemented in collaboration with GPT-4.
 
 ## Features
 
@@ -12,8 +14,6 @@ successful), and institution IDs to a database for future querying and maintenan
 2. **Streaming**: Streams OpenAI's responses back to clients in real-time.
 3. **Logging**: Records request timestamps, response times, status codes, request contents, response contents (if
    successful), and institution IDs to a database.
-4. **Institution ID**: Retrieves the institution ID from the query string and removes it from the query string when
-   forwarding requests to OpenAI.
 5. **Error Handling**: Handles request failures.
 
 ## Possible Use Cases
@@ -59,7 +59,6 @@ Replace `<your_openai_api_key>` with your actual OpenAI API key.
 In summary, OpenAI API Proxy is a flexible and powerful tool designed to help enterprises and institutions better manage
 and monitor their access to the OpenAI API, improving security, control, and performance.
 
-## Possible Improvements
+## License
 
-1. this project should be a general purpose API Proxy, not only for OpenAI API, use subpath to route to different API
-2. add more logging, like request headers, response headers, etc.
+This program is licensed under the MIT License. Please see the [LICENSE](LICENSE) file for details.
