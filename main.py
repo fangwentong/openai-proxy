@@ -53,7 +53,7 @@ async def proxy_openai_api(request: Request):
                 log.request_time = start_time
                 log.response_time = time.time() - start_time
                 log.status_code = res.status_code
-                log.request_content = (await request.body()).decode('utf-8') if request.method == 'POST' else None
+                log.request_content = request_body
                 log.response_content = content.decode('utf-8')
                 log.response_header = json.dumps([[k, v] for k, v in res.headers.items()])
 
