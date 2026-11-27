@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, BigInteger
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import BigInteger, Column, Integer, String
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # database config

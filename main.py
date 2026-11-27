@@ -4,12 +4,12 @@ import time
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from starlette.background import BackgroundTask
 
 from config import proxied_hosts_config
-from log import OpenAILog, save_log, create_tables
-from utils import PathMatchingTree, OverrideStreamResponse
+from log import OpenAILog, create_tables, save_log
+from utils import OverrideStreamResponse, PathMatchingTree
 
 proxied_hosts = PathMatchingTree(proxied_hosts_config)
 
@@ -32,16 +32,22 @@ app = FastAPI(lifespan=lifespan)
 
 async def proxy_openai_api(request: Request):
     # proxy request to OpenAI API
-    headers = {k: v for k, v in request.headers.items() if
-               k not in {'host', 'content-length', 'x-forwarded-for', 'x-real-ip', 'connection'}}
-    url = f'{proxied_hosts.get_matching(request.url.path)}{request.url.path}'
+    headers = {
+        k: v
+        for k, v in request.headers.items()
+        if k not in {"host", "content-length", "x-forwarded-for", "x-real-ip", "connection"}
+    }
+    matched_host = proxied_hosts.get_matching(request.url.path)
+    if matched_host is None:
+        raise HTTPException(status_code=404, detail="No matching upstream host")
+    url = f"{matched_host}{request.url.path}"
 
     start_time_in_secs = time.time()
 
     try:
-        request_body = await request.json() if request.method in {'POST', 'PUT'} else None
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail='Invalid JSON body')
+        request_body = await request.json() if request.method in {"POST", "PUT"} else None
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON body") from exc
 
     log = OpenAILog()
 
@@ -69,7 +75,7 @@ async def proxy_openai_api(request: Request):
                 log.response_header = json.dumps([[k, v] for k, v in res.headers.items()])
 
         except httpx.RequestError as exc:
-            raise HTTPException(status_code=500, detail=f'An error occurred while requesting: {exc}')
+            raise HTTPException(status_code=500, detail=f"An error occurred while requesting: {exc}") from exc
 
     async def update_log():
         nonlocal log
@@ -84,7 +90,7 @@ async def proxy_openai_api(request: Request):
     return response
 
 
-@app.route('/{path:path}', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def request_handler(request: Request):
     return await proxy_openai_api(request)
 

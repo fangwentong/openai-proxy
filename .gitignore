@@ -162,3 +162,8 @@ cython_debug/
 
 *.db
 poetry.lock
+
+# Local SQLite logs & tool caches
+*.db-wal
+*.db-shm
+.ruff_cache/

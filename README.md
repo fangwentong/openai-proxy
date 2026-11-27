@@ -1,64 +1,65 @@
 # OpenAI API Proxy
 
-OpenAI API Proxy is a transparent middleware service built using Python and FastAPI, designed to sit between clients and
-the OpenAI API. The proxy supports all models and APIs of OpenAI, streams OpenAI's responses back to clients in
-real-time, and logs request timestamps, response times, status codes, request contents and response contents to a
-database for future querying and maintenance.
+OpenAI API Proxy is a lightweight transparent middleware service built with Python and FastAPI, designed to sit between
+clients and OpenAI-compatible APIs. It forwards requests, streams responses back to clients in real time, and logs
+request/response metadata and payloads to a local SQLite database.
 
-Note that this program was originally implemented in collaboration with GPT-4.
+> [!NOTE]
+> By default, request and response bodies are persisted in plain text to `./openai_log.db` in the working directory.
+> Protect access to that database file if requests contain sensitive prompts or user data.
 
 ## Features
 
-1. **Transparent Proxy**: Supports all OpenAI models and APIs. Request paths, models, and OPENAI_API_KEY are all
-   obtained from the original requests.
-2. **Streaming**: Streams OpenAI's responses back to clients in real-time.
-3. **Logging**: Records request timestamps, response times, status codes, request contents, response contents (if
-   successful), and institution IDs to a database.
-5. **Error Handling**: Handles request failures.
+1. **Transparent Proxy**: Forwards requests, paths, and `Authorization` headers to configured upstream hosts via
+   longest-prefix path routing.
+2. **Streaming**: Streams upstream responses back to clients in real time.
+3. **Logging**: Records request timestamps, response durations, status codes, headers, and payloads to SQLite.
+4. **Error Handling**: Returns clean HTTP errors on invalid payloads or unmatched upstream routes.
 
-## Possible Use Cases
+## Installation
 
-1. **Enterprises and Institutions**: Establish a secure middleware layer between clients and the OpenAI API for internal
-   monitoring and management of API usage.
-2. **Data Analysis**: Collect and analyze log data to understand hotspots and trends in API requests, optimizing API
-   usage and performance.
-3. **Billing and Quota Management**: Track API requests per institution to implement usage-based billing and quota
-   management.
-4. **Auditing and Security**: Ensure API requests comply with enterprise and institutional security policies and assist
-   in auditing and tracking.
-5. **Performance Monitoring**: Monitor API response times and status codes in real-time to identify and resolve
-   potential performance issues.
-6. **API Version Control and Migration**: Facilitate smooth API version migration by handling version discrepancies at
-   the proxy layer, reducing client migration costs.
+Requires Python 3.10+.
+
+```bash
+pip install .
+```
+
+For local development and running tests:
+
+```bash
+pip install -e ".[dev]"
+ruff check .
+pytest -v
+```
 
 ## Usage
 
-1. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-2. Run the proxy server:
+### Run locally
 
 ```bash
 uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-3. Make requests to the proxy server, specifying the OpenAI API endpoint, model, and any other required parameters:
+### Run with Docker
 
 ```bash
-curl -X POST "http://localhost:8000/v1/completions" \
--H "Content-Type: application/json" \
--H "Authorization: Bearer <your_openai_api_key>" \
--d '{"model": "text-davinci-003", "prompt": "Once upon a time...", "max_tokens": 100, "temperature": 0}'
+docker build -t openai-proxy .
+docker run --rm -p 8000:8000 -v "$(pwd)/data:/app/data" openai-proxy
+```
+
+Mount a host volume if you want to persist `./openai_log.db` across container restarts.
+
+### Send a request
+
+```bash
+curl -N -X POST "http://127.0.0.1:8000/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_openai_api_key>" \
+  -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
 ```
 
 Replace `<your_openai_api_key>` with your actual OpenAI API key.
 
-In summary, OpenAI API Proxy is a flexible and powerful tool designed to help enterprises and institutions better manage
-and monitor their access to the OpenAI API, improving security, control, and performance.
-
 ## License
 
-This program is licensed under the MIT License. Please see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
