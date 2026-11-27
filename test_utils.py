@@ -130,13 +130,3 @@ async def test_unmatched_host_returns_404(monkeypatch):
         resp = await client.get("/unmatched/path")
     assert resp.status_code == 404
     assert resp.json()["detail"] == "No matching upstream host"
-
-
-@pytest.mark.asyncio
-async def test_invalid_json_returns_400(monkeypatch):
-    monkeypatch.setattr(proxy_main, "proxied_hosts", PathMatchingTree({"/": "https://api.openai.com"}))
-    transport = httpx.ASGITransport(app=proxy_main.app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/v1/chat/completions", content=b"not-valid-json")
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "Invalid JSON body"

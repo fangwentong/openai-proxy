@@ -1,18 +1,79 @@
 from __future__ import annotations
 
-import typing
-from functools import partial
+from collections.abc import Iterable
 
-import anyio
-from fastapi.responses import StreamingResponse
-from starlette.types import Receive, Scope, Send
+HOP_BY_HOP_HEADERS: frozenset[str] = frozenset(
+    {
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailer",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
+    }
+)
+
+
+def filter_hop_by_hop_headers(
+    headers: Iterable[tuple[str, str]],
+    *,
+    extra_strip: Iterable[str] = (),
+) -> list[tuple[str, str]]:
+    """Strip RFC 9110 hop-by-hop headers (including those nominated by Connection)."""
+    raw_items = list(headers)
+    strip = set(HOP_BY_HOP_HEADERS)
+    strip.update(h.lower() for h in extra_strip)
+
+    for key, value in raw_items:
+        if key.lower() == "connection":
+            for token in value.split(","):
+                name = token.strip().lower()
+                if name:
+                    strip.add(name)
+
+    return [(k, v) for k, v in raw_items if k.lower() not in strip]
+
+
+class BoundedBodyCapture:
+    """Capture up to `max_bytes` from a byte stream without unbounded memory growth."""
+
+    def __init__(self, max_bytes: int):
+        self.max_bytes = max(0, max_bytes)
+        self._buf = bytearray()
+        self.truncated = False
+
+    def append(self, chunk: bytes) -> None:
+        if not chunk:
+            return
+        remaining = self.max_bytes - len(self._buf)
+        if remaining <= 0:
+            self.truncated = True
+            return
+        if len(chunk) > remaining:
+            self._buf.extend(chunk[:remaining])
+            self.truncated = True
+        else:
+            self._buf.extend(chunk)
+
+    def decode(self, *, disconnected: bool = False, upstream_error: bool = False) -> str:
+        text = self._buf.decode("utf-8", errors="replace")
+        if self.truncated:
+            text += "\n...[truncated]"
+        if upstream_error:
+            text += "\n...[upstream_error]"
+        elif disconnected:
+            text += "\n...[client_disconnected]"
+        return text
 
 
 class PathMatchingTree:
     """Prefix tree for mapping request paths to upstream base URLs.
 
     Supports exact segments, single-segment `*` wildcards, and longest-prefix
-    fallback when a deeper path does not match a more specific route.
+    fallback (deeper match wins; exact segment wins over `*` at equal depth).
     """
 
     def __init__(self, config: dict[str, str]):
@@ -53,42 +114,3 @@ class PathMatchingTree:
         if matched is None:
             return None
         return matched[2].rstrip("/")
-
-
-class OverrideStreamResponse(StreamingResponse):
-    """Override StreamingResponse to lazily send response status_code and headers."""
-
-    async def stream_response(self, send: Send) -> None:
-        first_chunk = True
-        async for chunk in self.body_iterator:
-            if first_chunk:
-                await self.send_request_header(send)
-                first_chunk = False
-            if not isinstance(chunk, bytes):
-                chunk = chunk.encode(self.charset)
-            await send({"type": "http.response.body", "body": chunk, "more_body": True})
-
-        if first_chunk:
-            await self.send_request_header(send)
-        await send({"type": "http.response.body", "body": b"", "more_body": False})
-
-    async def send_request_header(self, send: Send) -> None:
-        await send(
-            {
-                "type": "http.response.start",
-                "status": self.status_code,
-                "headers": self.raw_headers,
-            }
-        )
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        async with anyio.create_task_group() as task_group:
-            async def wrap(func: typing.Callable[[], typing.Coroutine[typing.Any, typing.Any, typing.Any]]) -> None:
-                await func()
-                task_group.cancel_scope.cancel()
-
-            task_group.start_soon(wrap, partial(self.stream_response, send))
-            await wrap(partial(self.listen_for_disconnect, receive))
-
-        if self.background is not None:
-            await self.background()
